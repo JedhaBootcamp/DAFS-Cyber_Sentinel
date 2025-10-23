@@ -1,34 +1,45 @@
+from __future__ import annotations
+from typing import Dict
 import numpy as np
 from sklearn.metrics import (
-    accuracy_score, f1_score, precision_score, recall_score,
-    roc_auc_score, average_precision_score
+    accuracy_score, precision_score, recall_score, f1_score,
+    roc_auc_score, average_precision_score, confusion_matrix
 )
 
-def evaluate(model, X_test, y_test) -> dict:
-    """
-    Compute core binary classification metrics.
-    IMPORTANT: anomaly = positive class.
-    TODO (Student D): add calibration metrics, per-class metrics, threshold search for F1/recall targets.
-    """
-    y_pred = model.predict(X_test)
-    if hasattr(model.named_steps["model"], "predict_proba"):
-        y_proba = model.predict_proba(X_test)[:, 1]
-    else:
-        # Fallback: some estimators only have decision_function
-        if hasattr(model.named_steps["model"], "decision_function"):
-            scores = model.decision_function(X_test)
-            y_proba = (scores - scores.min()) / (scores.max() - scores.min() + 1e-9)
-        else:
-            y_proba = y_pred.astype(float)
+def _predict_proba_best(model, X):
+    clf = model.named_steps["model"]
+    X = model.named_steps["preproc"].transform(X)
+    if hasattr(clf, "best_iteration") and clf.best_iteration is not None:
+        return clf.predict_proba(X, iteration_range=(0, clf.best_iteration + 1))[:, 1]
+    booster = clf.get_booster()
+    if hasattr(booster, "best_ntree_limit") and booster.best_ntree_limit:
+        return clf.predict_proba(X, ntree_limit=booster.best_ntree_limit)[:, 1]
+    return clf.predict_proba(X)[:, 1]
 
-    metrics = {
-        "accuracy": float(accuracy_score(y_test, y_pred)),
-        "precision": float(precision_score(y_test, y_pred, zero_division=0)),
-        "recall": float(recall_score(y_test, y_pred, zero_division=0)),
-        "f1": float(f1_score(y_test, y_pred, zero_division=0)),
-        "roc_auc": float(roc_auc_score(y_test, y_proba)) if len(np.unique(y_test)) == 2 else None,
-        "pr_auc": float(average_precision_score(y_test, y_proba)),
-        "positives_test": int(np.sum(y_test == 1)),
-        "negatives_test": int(np.sum(y_test == 0)),
+def evaluate(model, X_test, y_test) -> Dict:
+    thr = getattr(model, "threshold_", 0.5)
+
+    proba_test = _predict_proba_best(model, X_test)
+    y_pred_test = (proba_test >= thr).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred_test, labels=[0, 1]).ravel()
+
+    test_metrics = {
+        "threshold": float(thr),
+        "accuracy": float(accuracy_score(y_test, y_pred_test)),
+        "precision": float(precision_score(y_test, y_pred_test, zero_division=0)),
+        "recall": float(recall_score(y_test, y_pred_test, zero_division=0)),
+        "f1": float(f1_score(y_test, y_pred_test, zero_division=0)),
+        "roc_auc": float(roc_auc_score(y_test, proba_test)) if len(np.unique(y_test)) == 2 else None,
+        "pr_auc": float(average_precision_score(y_test, proba_test)),
+        "tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp),
+        "positives": int(np.sum(y_test == 1)),
+        "negatives": int(np.sum(y_test == 0)),
     }
-    return metrics
+
+    return {
+        "train": getattr(model, "train_metrics_", None),
+        "valid": getattr(model, "valid_metrics_", None),
+        "test":  test_metrics,
+        "threshold": float(thr),
+        "fit_report": getattr(model, "fit_report_", None),
+    }
