@@ -1,0 +1,8 @@
+# This file lists all the dependencies (librairies)
+# needed for the project to run.
+pandas
+numpy
+scikit-learn
+xgboost
+matplotlib
+pytest
