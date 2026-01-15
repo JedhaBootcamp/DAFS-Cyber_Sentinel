@@ -3,7 +3,7 @@
 ## IT SHOULD RUN AS IS AND WORK FINE IF ALL OTHER FILES ARE CORRECT ##
 
 import json, os
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from pipeline.data import load_data
 from pipeline.preprocess import preprocess
 from pipeline.model import train_model
@@ -18,7 +18,7 @@ def main(seed: int = 42, outdir: str = "outputs"):
     metrics = evaluate(model, X_test, y_test)           # These are the functions that needs to improved, each student for each group should take care of one part
     make_plots(model, X_test, y_test, df, outdir)       # These are the functions that needs to improved, each student for each group should take care of one part
 
-    metrics["timestamp"] = datetime.now(UTC).isoformat() + "Z"
+    metrics["timestamp"] = datetime.now(timezone.utc).isoformat() + "Z"
     with open(os.path.join(outdir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
     print("Done. Metrics saved to outputs/metrics.json")
