@@ -9,6 +9,8 @@ def _scale_pos_weight(y):
     neg = max(1, int(np.sum(y == 0)))
     return neg / pos
 
+print("test Tuka")
+
 def train_model(X_train, y_train, preproc, seed: int = 42):
     """
     Build a Pipeline(preproc → XGBClassifier) and fit.
