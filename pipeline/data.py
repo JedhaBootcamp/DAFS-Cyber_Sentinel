@@ -11,6 +11,9 @@ def load_data(path: str = "data/train_data.csv") -> pd.DataFrame:
     """
     df = pd.read_csv(path)
 
+    #Petit print
+    print("Début de la partie Paul")
+
     # basic sanity checks
     missing = [c for c in EXPECTED_CATEGORICAL if c not in df.columns]
     if missing:
@@ -22,6 +25,7 @@ def load_data(path: str = "data/train_data.csv") -> pd.DataFrame:
     mapping = {"anomaly": 1, "normal": 0}
     if df[TARGET_COL].dtype == object:
         df[TARGET_COL] = df[TARGET_COL].map(mapping)
+
     # If already numeric, assume 0/1
     if not set(df[TARGET_COL].unique()).issubset({0, 1}):
         raise ValueError("Target must be 'normal'/'anomaly' or 0/1 after mapping.")
