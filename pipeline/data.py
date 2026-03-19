@@ -18,12 +18,28 @@ def load_data(path: str = "data/train_data.csv") -> pd.DataFrame:
     if TARGET_COL not in df.columns:
         raise ValueError(f"CSV missing target column '{TARGET_COL}'")
 
-    # Normalize target → binary 0/1
-    mapping = {"anomaly": 1, "normal": 0}
-    if df[TARGET_COL].dtype == object:
-        df[TARGET_COL] = df[TARGET_COL].map(mapping)
-    # If already numeric, assume 0/1
+    raw = df[TARGET_COL].astype(str).str.strip().str.lower()
+
+    # case 1: text labels normal/anomaly
+    if set(raw.unique()).issubset({"normal", "anomaly"}):
+        mapping = {"anomaly": 1, "normal": 0}
+        df[TARGET_COL] = raw.map(mapping)
+
+    # case 2: already numeric 0/1 stored as text
+    elif set(raw.unique()).issubset({"0", "1"}):
+        df[TARGET_COL] = raw.astype(int)
+
+    else:
+        raise ValueError(
+            f"Unexpected target values in '{TARGET_COL}': {raw.unique().tolist()}"
+        )
+
     if not set(df[TARGET_COL].unique()).issubset({0, 1}):
-        raise ValueError("Target must be 'normal'/'anomaly' or 0/1 after mapping.")
+        raise ValueError(
+            f"Target must be 'normal'/'anomaly' or 0/1 after mapping. "
+            f"Found: {df[TARGET_COL].unique().tolist()}"
+        )
+
+    df[TARGET_COL] = df[TARGET_COL].astype(int)
 
     return df
