@@ -21,7 +21,7 @@ def main(seed: int = 42, outdir: str = "outputs"):
     metrics["timestamp"] = datetime.now(UTC).isoformat() + "Z"
     with open(os.path.join(outdir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
-    print("Done. Metrics saved to outputs/metrics.json")
+    print("Done. Metrics have been saved to outputs/metrics.json")
 
 if __name__ == "__main__":
     main()
